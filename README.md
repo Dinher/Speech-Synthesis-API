@@ -6,6 +6,11 @@ This library interfaces the two main Speech Synthesis APIs, SpeechSynthesis and 
 You can see the API documention here:
 - [Speech Synthesis Web API, MOZ](https://developer.mozilla.org/en-US/docs/Web/API/SpeechSynthesis)
 - [Speech Synthesis Utterance Web API, MOZ](https://developer.mozilla.org/en-US/docs/Web/API/SpeechSynthesisUtterance)
+
+## Demo
+Included is the quick and dirty monolithic HTML demo which is the same as the [pen](https://codepen.io/dinher/pen/MWWMKvN).
+The demo demonstrates reading from an input field, populating the DOM with the text, and highlighting the text to based on the APIs even triggers.
+
 ## Usage
 Create an instance from the TextToSpeech class
 ```
