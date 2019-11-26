@@ -1,0 +1,221 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <style>
+    </style>
+  </head>
+  <body>
+    <div id="pen_container">
+      <div id="input_container">
+        <input id="textInput" type="text" placeholder="Add your text to speech here!" value=" In my younger and more vulnerable years my father gave me some advice that I've been turning over in my mind ever since."/>
+        <button onClick="utterInput()">Listen!</button>
+      </div>
+      <div id="tokens_container"></div>
+    </div>
+  </body>
+  <script>
+    /**
+     * Class that abstracts 
+     * @param {Object} synth Instance for Speech Synthesis API functionality
+     * @param {Object} voices Array, containing OS speech synthesis options
+     * @param {String} inputText The text to be uttered
+     * @param {String} inputTextTokens Array of inputText tokenized
+     * @param {Number} utterCurrentWordIndex Index of currently spoken word, derived from boundary event
+     * @param {Object} utterDOMTokens Array, DOM elements representing inputTextTokens
+     * @param {Boolean} isUtteranceDone Signals end of Speech Synthesis utterance
+     */
+    class TextToSpeech{
+        constructor(){
+            this.synth = window.speechSynthesis;
+            this.voices = this.synth.getVoices();
+
+            //this.utterance = new SpeechSynthesisUtterance();
+            this.inputText = "";
+            this.inputTextTokens = [];       
+            this.utterCurrentWordIndex = 0;  
+            this.utterDOMTokens = [];        
+            this.isUtteranceDone = false;
+        }
+
+        /**
+         * Registers event listeners for utterances. Links events to DOM, variable updates
+         */
+        initializeEventListeners(){
+            let self = this;   // scope into arrow functions
+
+            // Triggers on boundaries for word/sentence
+            this.utterance.addEventListener('boundary', function(event) { 
+                if(event.name != 'sentence'){
+                    let token = self.inputTextTokens[self.utterCurrentWordIndex];
+                    console.log('Speaking: ' + token + ' ' + self.utterCurrentWordIndex);
+                    self.utterDOMTokens.forEach( DOMtoken =>{
+                        DOMtoken.classList.remove('highlight-utterance');
+                    })
+                    self.utterDOMTokens[self.utterCurrentWordIndex].classList.add('highlight-utterance');
+                    if(self.utterCurrentWordIndex <= self.utterDOMTokens.length){
+                        self.utterCurrentWordIndex++;
+                    }
+                }
+            });
+
+            // Triggers beginning of utterance
+            this.utterance.addEventListener('start', function(event) { 
+                self.isUtteranceDone = false;
+                document.querySelector('.textSpeech_status.icon-play').classList.add('highlight-playback');
+                document.querySelector('.textSpeech_status.icon-pause').classList.remove('highlight-playback');
+                document.querySelector('.textSpeech_status.icon-stop').classList.remove('highlight-playback');
+              });
+
+            // Triggers end of utterance
+            this.utterance.addEventListener('end', function(event) { 
+                self.isUtteranceDone = true;
+                self.utterCurrentWordIndex = 0;
+                document.querySelector('.textSpeech_status.icon-stop').classList.add('highlight-playback');
+                document.querySelector('.textSpeech_status.icon-play').classList.remove('highlight-playback');
+                document.querySelector('.textSpeech_status.icon-pause').classList.remove('highlight-playback');
+            });
+        }
+
+        /**
+         * Initializes and processes class parameters based on inputted text
+         * 
+         * @param {String} text Input text to be uttered
+         */
+        processUtterance(text){
+            this.inputText = text;
+            this.inputTextTokens = text.split(' ');
+
+            // Assumes React component already populates the DOM object with child nodes
+            this.utterDOMTokens = Array.from(document.querySelector('#tokens_container').childNodes);
+            this.utterCurrentWordIndex = 0;
+            this.initializeEventListeners();
+        }
+
+        /**
+         * Registers input text for new utterance instance, required for speak() to function
+         *
+         * @param {String} text Input text to be uttered
+         */
+        read(text){
+            //this.utterance.text = text;
+            this.utterance = new SpeechSynthesisUtterance();    
+            this.utterance.text = text
+            this.processUtterance(text);
+        }
+
+        /**
+         * Sets rate of synth voice
+         * 
+         * @param {number} rate rate of synth voice
+         * @return {number} The rate value of synth.voice
+         */
+        speed(rate = 0.7){
+            // hard-coded until adjustment option is created
+            this.utterance.rate = rate;
+            return this.utterance.rate;
+        }
+
+        /**
+         * Sets pitch of synth voice
+         * 
+         * @param {number} pitch pitch of synth voice
+         * @returns {number} The pitch value of synth.voice
+         */
+        pitch(pitch = 0.9){
+            // hard-coded until adjustment option is created
+            this.utterance.pitch = pitch;
+            return this.utterance.pitch;
+        }
+
+        /**
+         * Is synth utterance paused
+         * 
+         * @returns {Boolean} Represents status of
+         */
+        isWaiting(){
+            return this.synth.paused;
+        }
+
+        /**
+         * Is synth utterance completed, based on 'end' event listener
+         * 
+         * @returns {Boolean} Represents status of synth playback/queue
+         */
+        isFinished(){
+            return this.isUtteranceDone;
+        }
+
+        /**
+         * Pauses played utterances, style playback buttons
+         */
+        wait(){
+            this.synth.pause();
+        }
+
+        /**
+         * Resumes paused utterances, style playback buttons
+         */
+        continue(){
+            this.synth.resume();
+        }
+
+        /**
+         * Repeats already uttered text, requires new instance of Utterance
+         */
+        repeat(){
+            this.listen(this.inputText);
+            this.synth.resume();
+            this.synth.cancel();            // Bug in queuing utterances, cancel all before starting again
+            this.speak();
+        }
+
+        /**
+         * Displays internal variables
+         */
+        diagnose(){
+            console.log("-----Sybil Internal------\n")
+            //console.log("Utterance: "+this.utterance)
+            console.log("InpuText: "+this.inputText)
+            console.log("InpuTextTokens: "+this.inputTextTokens)
+            console.log("UtterCurrentWordIndex: "+this.utterCurrentWordIndex)
+            //console.log("utterDOMTokens: "+this.utterDOMTokens)
+            console.log("isUtteranceDone: "+this.isUtteranceDone)
+        }
+
+        /**
+         * Speaks registered utterance
+         */
+        speak(){
+            if(this.utterance.text){
+                this.pitch();
+                this.speed();
+                this.synth.speak(this.utterance);
+            }else{
+                // No utterance text
+                console.log('No utterance text given.');
+                console.log('Please use sybil.listen("Your text here.") before sybil.speak() ')
+            }
+        }
+    }
+
+    var Sarah = new TextToSpeech();
+
+    function utterInput(){
+      let tokensContainer = document.querySelector('#tokens_container')
+      tokensContainer.innerHTML = '';
+      if ( 'speechSynthesis' in window ){
+        let input = document.querySelector('#textInput').value;
+      let inputTokens = input.split(' ');
+      inputTokens.map(token=>{
+        if(token.length > 0){
+         tokensContainer.innerHTML += "<span>"+token+"</span>" 
+        }
+      })
+      Sarah.read(input);
+      Sarah.speak();
+      }else{
+        tokensContainer.innerHTML = "It doesn't seem like your OS supports Web Speech APIs";
+      }
+    }
+  </script>
+</html>
