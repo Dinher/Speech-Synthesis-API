@@ -44,6 +44,14 @@ Not fully supported. If you're experimenting with the base SpeechSynthesis objec
 
 A clear way to avoid this is to clear the current queue `synth.clear()` and speak with a new utterance instance `synth.speak(new SpeechSynthesisUtterance("Hello World"))`
 
+## Improvements
+- Integrating support for modifying all possible parameters (voice, volume, pitch, etc.)
+- Some function to populate the DOM itself 
+  - adding styles to support text highlighting
+  - option to edit those styles
+ - error handling
+ - checking if OS supports speech synthesis
+
 ## License
 This project is open to the MIT License, enjoy!
 
